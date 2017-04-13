@@ -28,7 +28,7 @@ available for the fraction.
 
 # Part A
 # We are looking for the smallest value that can be successfully subtracted from 1.0
-# or formally, find smallest epsilon such that 1.0 - epsilon != 1.0
+# or in other words, find smallest epsilon such that 1.0 - epsilon != 1.0
 epsilon_a = 1.0
 while (1.0 - epsilon_a/2.0) != 1.0:
 	epsilon_a /= 2.0
@@ -38,8 +38,8 @@ print '\t\tepsilon_a:\t' + `epsilon_a` + '\n'
 # Running this code gives us a value of epsilon_a = 1.1102230246251565e-16
 # This value is within an order of 2 of the true value of epsilon, as we know that
 # 1.0 - (epsilon_a/2) == 1.0.  Given the 53 bits for the significand, we expect 
-# the true machine epsilon to be 2^-(53 - 1). However, 2^-52 = 2.22e-16 which is basically
-# double the value found above.
+# the true machine epsilon to be 2^-(53 - 1). However, 2^-52 = 2.22e-16 which is essentially
+# double the value of epsilon_a.
 
 
 
