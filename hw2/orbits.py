@@ -44,8 +44,8 @@ def f_orbit(x, t):
 	# m = len(x)/2 # m for mid-index of array
 	# denom = np.power(1 + np.sum(np.power(x[:m], 2)), 1.5)
 	# return np.concatenate((x[m:], -x[:m]/denom))
-	m = len(x)/2
-	return np.concatenate((x[m:], -x[:m]/np.power(1.0 + np.sum(np.power(x[:m], 2)), 1.5)))
+	mid = len(x)/2
+	return np.concatenate((x[mid:], -x[:mid]/np.power(1.0 + np.sum(np.power(x[:mid], 2)), 1.5)))
 
 
 
@@ -71,11 +71,9 @@ def a():
 
 	for h in hs:
 		ts = myint.get_timesteps(ti, tf, h)
-		# res_e = myint.runner(myint.euler_stepper, f_orbit, x, ti, tf, h)
-		# res_m = myint.runner(myint.mid_stepper, f_orbit, x, ti, tf, h)
-		# res_r = myint.runner(myint.rk_stepper, f_orbit, x, ti, tf, h)
-		# res_l = myint.leap_runner(f_orbit, x, ti, tf, h)
-
+		
+		res_e = myint.runner(myint.euler_stepper, f_orbit, x, ts, h)
+		res_m = myint.runner(myint.mid_stepper, f_orbit, x, ts, h)
 		res_r = myint.runner(myint.rk_stepper, f_orbit, x, ts, h)
 		res_l = myint.leap_runner(f_orbit, x, ts, h)
 
@@ -102,12 +100,11 @@ def b():
 	ts = myint.get_timesteps(ti, tf, h)
 	res = myint.runner(myint.rk_stepper, f_orbit, x, ts, h)
 
-	m = len(res[0])/2 # m is for mid index of state vector
+	mid = len(res[0])/2 # m is for mid index of state vector
 	# e =  (np.sum(np.power(res[:,m:],2), axis=1)/2.0) + (-1.0/np.power(1+np.sum(np.power(res[:,:m],2),axis=1),0.5))
-	term1 = (np.sum(np.power(res[:,m:],2), axis=1)/2.0)
-	term2 = (-1.0/np.power(1+np.sum(np.power(res[:,:m],2),axis=1),0.5))
+	term1 = (np.sum(np.power(res[:,mid:],2), axis=1)/2.0)
+	term2 = (-1.0/np.power(1+np.sum(np.power(res[:,:mid],2),axis=1),0.5))
 	e = term1 + term2
-	ts = np.arange(ti, tf+h, h)
 
 
 	plt.scatter(ts, e, alpha=0.5,c='g')
@@ -123,7 +120,7 @@ def b():
 
 def main():
 	print 'main'
-	# a()
+	a()
 	b()
 
 if __name__ == '__main__':

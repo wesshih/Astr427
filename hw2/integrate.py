@@ -51,7 +51,7 @@ runner:	The runner function is the top level function that actually calculates t
 '''
 
 import numpy as np
-import operator
+import operator # be sure to remove this if you don't use the operator.setitem function...
 
 
 def runner(step, f, x, t, h):
@@ -71,6 +71,11 @@ def runner(step, f, x, t, h):
 				from ti to tf, including the initial and final values.
 	'''
 
+	# Hmm, i could always put a case in here if the stepper is leap stepper to just go to
+	# leap_runner... that makes the cosine and orbits functions nicer...
+	if step.__name__ == 'leap_stepper':
+		return leap_runner(f, x, t, h)
+
 	x = np.array([x])
 	for ti in t[:-1]: # t[:-1] because t[-1] = tf, so we're done
 		x = np.append(x, [step(f, x[-1], ti, h)], axis=0)
@@ -81,10 +86,7 @@ def runner(step, f, x, t, h):
 	This shouldn't be in the project when i submit...
 	'''
 	# x = np.append([x], np.zeros(shape=(len(t)-1, len(x))), axis=0)
-	# for i in xrange(1,len(t)):
-	# 	x[i] = np.array([step(f, x[i-1], t[i], h)])
-	# # OR.....
-	# # map(lambda i: operator.setitem(x, i, step(f, x[i-1], t[i-1],h)), xrange(1,len(x)))
+	# map(lambda i: operator.setitem(x, i, step(f, x[i-1], t[i-1],h)), xrange(1,len(x)))
 	# return x
 
 
@@ -146,47 +148,36 @@ def rk_stepper(f, x, t, h):
 	k4 = h*f(x+k3, t)
 	return x + (k1/6.0) + (k2/3.0) + (k3/3.0) + (k4/6.0)
 
-
-def leap_runner2(f, x, ti, tf, h):
+def leap_runner(f, x, t, h):
 	'''
 	Special runner that is uses the leapfrog stepper to perform the integration.  A seperate
 	runner is needed for the leapfrog method becasue it requires a slightly different setup
-	and finish.  We first find the velocity a one half step from ti.  We will use the rk_stepper
+	than the "standard" runner.  if leap_stepper is passed to runner, it will call leap_runner.
+	We first find the velocity a one half step from t[0].  We will use the rk_stepper
 	to find these values.  It is okay to use an "expensive" method like RK4, as we will only run
 	it once to get an initial value.  We will then continue forward using the leap_stepper, where 
-	we will have positions x1 to xn on integer multipls of h, and v1 to vn on half integers.
+	we will have positions x1 to xn on integer multiples of h, and v1 to vn on half integers.
 
 	Args:
 		f:		derivative function to use
 		x:		Initial state vector
-		ti:		Initial time
-		tf: 	Final time
+		t:		time interval to step through
 		h:		Step size
 
 	Returns:
 		x: 		An array of state vectors that holds the result of the stepper at each time step
-				from ti to tf, including the initial and final values.
+				in t.
 	'''
-	mid = len(x)/2
-	# first entry in array of state vectors is x[0] = [x1(ti), ... , xn(ti), v1(ti+h/2), ... , vn(ti+h/2)]
-	x = np.array([np.append(x[:mid], rk_stepper(f, x, ti, h/2.0)[mid:])]) 
-	while ti < tf:
-		x = np.append(x, [leap_stepper(f, x[-1], ti, h)], axis=0)
-		ti += h
-
-	# we now have x(tf), but v(tf+h/2). so lets find v(tf).
-	# is this step necessary? and if so, is it necessary atfer ever step?
-	# i.e. should the state vector we return be [xi(ti),vi(ti)] or [xi(ti),vi(ti+h/2)]?
-	# x[-1,mid:] = ((x[-1,:mid] - x[-2,:mid])/h)
-
-	return x
-
-# Question: can i incorporate this into the general runner? then i can iterate more easily
-def leap_runner(f, x, t, h):
-	mid = len(x)/2
+	mid = len(x)/2 # need to save because x will become array of state vectors
 	x = np.array([np.append(x[:mid], rk_stepper(f, x, t[0], h/2.0)[mid:])])
 	for ti in t[:-1]: # again the -1 is because we want to stop stepping 1 from the end
 		x = np.append(x, [leap_stepper(f, x[-1], ti, h)], axis=0)
+	
+	# We don't need to find the velocity at any integer multiples of h because the acceleration 
+	# is not dependent on time.  If we needed to know the velocity to calc the accel,
+	# then we would have to "catch" the velocity up the the same time as the position before
+	# we calculated the accel
+
 	return x
 
 
@@ -216,5 +207,12 @@ def leap_stepper(f, x, t, h):
 	x[mid:] = x[mid:] + h*f(x, t/2.0)[mid:]
 	return x
 
+
 def get_timesteps(ti, tf, h):
+	'''
+	small convenience function for getting an array of time steps from step size and initial
+	and final times.  The spacing of adjacent time steps will be very close to h, however, due
+	to roundoff error they may not be exactly equal.  This is totally worth it though, because
+	it ensures that we will land exactly on the end time tf
+	'''
 	return np.linspace(ti, tf, int((tf-ti)/h)+1)

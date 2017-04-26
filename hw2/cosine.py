@@ -35,8 +35,7 @@ def f_cos(x, t):
 	Returns:
 		state vector that is the derivative of x at time t
 	'''
-	mid = len(x)/2
-	return np.concatenate((x[mid:], -x[:mid]))
+	return np.concatenate((x[len(x)/2:], -x[:len(x)/2]))
 
 
 def a():
@@ -53,7 +52,7 @@ def a():
 	hs = np.array([1.0, 0.3, 0.1, 0.03, 0.01])
 
 	# what about leap_stepper??
-	steppers = [myint.euler_stepper, myint.mid_stepper, myint.rk_stepper]
+	steppers = [myint.euler_stepper, myint.mid_stepper, myint.rk_stepper, myint.leap_stepper]
 
 	# make a figure for each type of stepper
 	for step in steppers:
@@ -61,6 +60,7 @@ def a():
 		color = iter(['r','b','g','c','m'])
 		count = 511
 		fig = plt.figure('Stepper: ' + `step.__name__`,figsize=(10,10))
+		fig.suptitle(step.__name__, fontsize=20)
 		ls = []
 		for h in hs:
 			ts = myint.get_timesteps(ti, tf, h)
@@ -68,26 +68,31 @@ def a():
 
 			c = color.next()
 			# plt.subplot(count).scatter(ts, res[:,0],alpha=0.5,s=20,c=temp_col)
-			l = plt.subplot(count).plot(ts, res[:,0], 's-', alpha=0.5,c=c)
+			l = plt.subplot(count).plot(ts, res[:,0], 's-', alpha=0.5,c=c,label=str('h:%0.3f'%h))
 			ls.append((l[0],str('h:%0.3f'%h))) # for the legend
 
 			# lets plot the known solution of x=cos(t) to compare
 			# we should probably calculate this earlier so i don't have to keep doing it
 			# just leave it for now
 			# also need to make it move visible
-			plt.subplot(count).plot(ts, np.cos(ts), ':',alpha=0.9, lw=2.0, c='k')
+			plt.subplot(count).plot(ts, np.cos(ts), '-',alpha=0.9, lw=2.0, c='k',label='cos(t)')
+			plt.legend(ncol=2) #(l[0]), (step.__name__))
 
 			# plt.subplot(count).set_xticklabels([])
 			# plt.subplot(count).set_yticklabels([])
-			# plt.subplot(count).set_ylim(-5,5)
-			# plt.subplot(count).set_xlim(-1,31)
+			plt.subplot(count).set_ylim(-5,5)
+			if step.__name__ == 'euler_stepper':
+				# need to change bounds on y because the euler solution grows rapidly
+				plt.subplot(count).set_ylim(-15,15)
+			plt.subplot(count).set_xlim(-1,31)
 			count += 1
 
 		# plt.subplots_adjust(wspace=0, hspace=0)
 		# fig.tight_layout()
 
-		ls = zip(*ls)
-		fig.legend(ls[0], ls[1], 'upper center',mode='expand',ncol=2)
+		# ls = zip(*ls)
+		# fig.legend(ls[0], ls[1], 'right',mode='expand',ncol=1)
+		# plt.title('Center Title')
 	
 	plt.show()
 
@@ -108,30 +113,22 @@ def b():
 	# hs = np.linspace(0.003, 0.3, 30)
 	hs = np.array([1.0, 0.3, 0.1, 0.03, 0.01])
 
-	
-	err_e = np.array([])
-	err_m = np.array([])
-	err_r = np.array([])
-	err_l = np.array([])
+	steppers = [myint.euler_stepper, myint.mid_stepper, myint.rk_stepper, myint.leap_stepper]
+	cos30 = np.cos(tf) # calculate this once and then reuse
 
-	for h in hs:
-		ts = myint.get_timesteps(ti, tf, h)
-		res_euler = myint.runner(myint.euler_stepper, f_cos, x0, ts, h)
-		res_mid = myint.runner(myint.mid_stepper, f_cos, x0, ts, h)
-		res_rk = myint.runner(myint.rk_stepper, f_cos, x0, ts, h)
-		res_lf = myint.leap_runner(f_cos, x0, ts, h)
-
-		err_e = np.append(err_e, np.abs(res_euler[-1,0] - np.cos(tf)))
-		err_m = np.append(err_m, np.abs(res_mid[-1,0] - np.cos(tf)))
-		err_r = np.append(err_r, np.abs(res_rk[-1,0] - np.cos(tf)))
-		err_l = np.append(err_l, np.abs(res_lf[-1,0] - np.cos(tf)))
-
-	fig = plt.figure("Part B", figsize=(10,10))
-	le = plt.loglog(hs, err_e, 'rs-')[0]
-	lm = plt.loglog(hs, err_m, 'gs-')[0]
-	lr = plt.loglog(hs, err_r, 'bs-')[0]
-	ll = plt.loglog(hs, err_l, 'ms-')[0]
-	fig.legend((le, lm, lr, ll), ('euler', 'midpoint', 'RK4', 'Leap Frog'), 'upper right')
+	fig = plt.figure("Part B: Error", figsize=(10,10))
+	fig.suptitle("Error", fontsize=20)
+	colors = iter(['r', 'g', 'b', 'c', 'm'])
+	labels = []
+	for step in steppers:
+		err = np.array([])
+		for h in hs:
+			ts = myint.get_timesteps(ti, tf, h)
+			res = myint.runner(step, f_cos, x0, ts, h)
+			err = np.append(err, np.abs(res[-1,0] - cos30))
+		labels.append((plt.loglog(hs, err, 's-', c=colors.next())[0],step.__name__))
+	labels = zip(*labels)
+	fig.legend(labels[0], labels[1], 'lower center', mode='expan', ncol=2)
 	plt.show()
 
 	# First lets quickly describe what I'm doing here.  hs is an array of step-sizes that 
