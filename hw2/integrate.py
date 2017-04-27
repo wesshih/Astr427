@@ -6,29 +6,23 @@ Astr 427 Homework 2
 
 Problem 1: ODE Integrator
 
-This file contains functions that can be used to solve ODEs. 
-
-There are a few "names/arrays/objects" that will be used in all parts of this homework.
-The format and definition of these objects should be consistent across all hw2 files.
+There are a few objects used throughout the homework that require specific format.
+The format and definition of these objects is be consistent across all hw2 files, and so
 I will put a detailed description of these objects here, but will only restate the required 
 format in subsequent comments.
 
 x: Numpy array that holds information about the dependent variables at some time.  We can
 	think of this as a vector that represents the state of the system at one particualr time,
 	and so I will generally refer to it as a "state vector". I will try to keep the definition
-	of x as general as possible for potential future use. If we have n dependent varialbes
+	of x as general as possible for potential future use. If we have n dependent variables
 	x1 to xn, then the required format for x is:
 		-x must be of length 2n -> len(x) = 2n
 		-The first n elements are the dependent variables x1 to xn -> x[:n] = [x1,...,xn]
 		-The remaining n elements are the 1st time derivative of x1 to xn -> x[n:] = [v1,...,vn]
 		-In short, x must be of form [x1,...,xn, v1,...,vn] for the integrator functions to work
 	
-	(A note to myself for later: there is no time dependence in this assignment, however, these
-	x1 to xn should probably be functions that take a time t)
-
-
-f: Function that differentiates a given state vector at the given time.  This will primarily
-	be used as a functor, as it will be used by the integrator functions to determine how the 
+f: Function that differentiates a given state vector at the given time.  Its main purpose is to
+	be passed around as a functor. It will be used by the integrator functions to determine how the 
 	state vector changes with each step. This function will depend on the particular Diff Eq
 	that we are tying to solve.  For f to be used in my integrator, it must have the function
 	signature f(x, t), where x is a state vector and t is time.  f must return a properly
@@ -43,9 +37,9 @@ stepper: There are several steppers in this file.  They all aim to do the same t
 	vector that has been moved forwared in time by one step.
 
 runner:	The runner function is the top level function that actually calculates the entire problem.
-	Given correctly formatted stepper, f, x0, h, and initial and final times ti and tf, the runner
-	integrates the ODE over the given time frame.  Beginning at ti, the runner uses the stepper
-	to move x forward by h until it reaches tf.  When finished, the runner returns an array of
+	Given correctly formatted stepper, f, x0, h, and timestep array, the runner
+	integrates the ODE over the given time frame.  Beginning at ti=t[0], the runner uses the stepper
+	to move x forward by h until it reaches tf=t[-1].  When finished, the runner returns an array of
 	state vectors, one for each time step (including ti and tf).
 
 '''
@@ -56,8 +50,8 @@ import operator # be sure to remove this if you don't use the operator.setitem f
 
 def runner(step, f, x, t, h):
 	'''
-	Solves an ODE by repeatedly calling stepper to time evolve the state vector x. Begins
-	at time ti, and moves towards tf in steps of h.
+	Solves an ODE by repeatedly calling a stepper to time evolve the state vector x. Beginning
+	at the time t[0], the runner uses the provided stepper to move forward in time by step size h.
 
 	Args:
 		step:	stepper algirthm to use
@@ -68,27 +62,17 @@ def runner(step, f, x, t, h):
 
 	Returns:
 		x: 		An array of state vectors that holds the result of the stepper at each time step
-				from ti to tf, including the initial and final values.
+				in t, including the initial and final values.
 	'''
 
-	# Hmm, i could always put a case in here if the stepper is leap stepper to just go to
-	# leap_runner... that makes the cosine and orbits functions nicer...
+	# the Leapfrog method requires a slightly specialized setup. Just return the results of leap_runner.
 	if step.__name__ == 'leap_stepper':
 		return leap_runner(f, x, t, h)
 
 	x = np.array([x])
-	for ti in t[:-1]: # t[:-1] because t[-1] = tf, so we're done
+	for ti in t[:-1]: # Be sure not to step forward at the final time
 		x = np.append(x, [step(f, x[-1], ti, h)], axis=0)
 	return x
-
-	'''
-	This is a second runner that i am playing around with different ways to do it,
-	This shouldn't be in the project when i submit...
-	'''
-	# x = np.append([x], np.zeros(shape=(len(t)-1, len(x))), axis=0)
-	# map(lambda i: operator.setitem(x, i, step(f, x[i-1], t[i-1],h)), xrange(1,len(x)))
-	# return x
-
 
 def euler_stepper(f, x, t, h):
 	'''

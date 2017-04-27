@@ -11,6 +11,9 @@ a potential Phi = -1/(1 + x^2 + y^2)^1/2. This is fairly similar to a 1/r potent
 so we expect the solutions to look more or less elliptical.  Because it is not exactly
 1/r, we will have an ellipse that precesses around the origin.
 
+This file contains the f_orbit function which will be passed as a functor to the integrator.
+The code for parts A and B are in the main function, and they are discussed more below.
+
 As described in the integrate.py docstring, the following formats must be followed:
 
 x = [x1, ... , xn, v1, ... , vn]
@@ -21,8 +24,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import integrate as myint
 
-# simply assign the second half of the array to be the first half -> dxi/dt = vi
-# then set dvidt = -xi/(1 + x1^2 + ... + xn^2)^(3/2)
 def f_orbit(x, t):
 	'''
 	f_orbit calculates the derivative of a state vector x, such that it satisfies the
@@ -37,91 +38,101 @@ def f_orbit(x, t):
 	Results:
 		state vector that is the derivative of x at time t
 	'''
-
-	# TODO: decide what you want to do in terms of readability vs concision. Also look at
-	# runtime and make sure that you pick the more efficient one.
-
-	# m = len(x)/2 # m for mid-index of array
-	# denom = np.power(1 + np.sum(np.power(x[:m], 2)), 1.5)
-	# return np.concatenate((x[m:], -x[:m]/denom))
 	mid = len(x)/2
 	return np.concatenate((x[mid:], -x[:mid]/np.power(1.0 + np.sum(np.power(x[:mid], 2)), 1.5)))
 
 
-
-def a():
+def main():
 	'''
-	Part A asks us to integrate the differential equation that describes a 2D orbit
-	for 0.0 <= t <= 100.0 with initial conditions x(0) = 1, y(0) = 0, x'(0) = 0, y'(0) = 0.3.
-	We will use Leapfrog and RK4 to perform this calculation, and maybe use the other two
-	just to see how different they are. We'll run this calculation several times with various
-	step sizes and look at how sensitive the output is to different step sizes.
-
+	Problem 3 asks us to integrate the ode that describes orbital motion.
+	This is very similar in its process to problem 2.  Like in problem 2,
+	I will solve the equations, and then create the plots for parts A and B
+	at the same time. Answers to questions and analysis of the problem is below.
 	'''
 
-	# First we'll set up and run the actual integration. Plotting and analysis will
-	# come afterwards.
-
-	x = np.array([1.0, 0.0, 0.0, 0.3])
+	x0 = np.array([1.0, 0.0, 0.0, 0.3])
 	ti, tf = 0.0, 100.0
-	hs = np.array([1.0, 0.1, 0.01])
+	hs = np.linspace(1.0, 0.01, 4)
 
-	plt.figure('Problem 3: Part A', figsize=(10,10))
-	subplot = 0 #211
+	# arrays for the energies of different solutions
+	es_rk = np.array([])
+	es_lf = np.array([])
 
+	subplot = 221
 	for h in hs:
+		# Get a list of times ts that our integrator will use.  This list begins at the
+		# initial time ti, and takes steps of size h until the final time tf. Then actually
+		# run the integrator for the current stepper to get a solution.
 		ts = myint.get_timesteps(ti, tf, h)
-		
-		res_e = myint.runner(myint.euler_stepper, f_orbit, x, ts, h)
-		res_m = myint.runner(myint.mid_stepper, f_orbit, x, ts, h)
-		res_r = myint.runner(myint.rk_stepper, f_orbit, x, ts, h)
-		res_l = myint.leap_runner(f_orbit, x, ts, h)
+		sol_rk = myint.runner(myint.rk_stepper, f_orbit, x0, ts, h)
+		sol_lf = myint.runner(myint.leap_stepper, f_orbit, x0, ts, h)
 
-		plt.subplot(231 + subplot).scatter(res_r[:,0], res_r[:,1], c='r', alpha=0.6)
-		plt.subplot(231 + subplot).plot(res_r[:,0], res_r[:,1], c='k', alpha=0.6)
-		plt.subplot(231 + subplot+3).scatter(res_l[:,0], res_l[:,1], c='r', alpha=0.6)
-		plt.subplot(231 + subplot+3).plot(res_l[:,0], res_l[:,1], c='k', alpha=0.6)
-		# plt.subplot(231 + subplot).set_xticklabels([])
-		# plt.subplot(231 + subplot).set_yticklabels([])
-		# plt.subplot(231 + subplot+3).set_xticklabels([])
-		# plt.subplot(231 + subplot+3).set_yticklabels([])
+		# Plot things for Part A
+		fig1 = plt.figure('Problem 3 - Part A: rk_stepper', figsize=(10,10))
+		fig1.suptitle('Problem 3 - Part A: rk_stepper', fontsize=20)
+		plt.subplot(subplot).plot(sol_rk[:,0], sol_rk[:,1], 'ro-', label=str('h: %0.3f'%h))
+		plt.legend(fontsize=12)
+
+		fig2 = plt.figure('Problem 3 - Part A: leap_stepper', figsize=(10,10))
+		fig2.suptitle('Problem 3 - Part A: leap_stepper', fontsize=20)
+		plt.subplot(subplot).plot(sol_lf[:,0], sol_lf[:,1], 'go-', label=str('h: %0.3f'%h))
+		plt.legend(fontsize=12)
+		
+
+		# calculate the energy of the RK4 solution for part B
+		fig3 = plt.figure('Problem 3 - Part B: Energy RK4', figsize=(10,10))
+		fig3.suptitle('Problem 3 - Part B: Energy RK4', fontsize=20)
+		mid = len(sol_rk[0])/2
+		ke_rk = (np.sum(np.power(sol_rk[:,mid:],2), axis=1)/2.0)
+		pe_rk = -1.0/(np.power(1 + np.sum(np.power(sol_rk[:,:mid],2),axis=1), 0.5))
+		plt.subplot(subplot).plot(ts, ke_rk + pe_rk, 'ro-', label=str('h: %0.3f'%h))
+		plt.subplot(subplot).plot(ts, ke_rk, 'go-', label=str('h: %0.3f'%h))
+		plt.subplot(subplot).plot(ts, pe_rk, 'bo-', label=str('h: %0.3f'%h))
+		plt.legend(fontsize=12)
+
+		# now do the same for the leapfrog method.
+		ke_lf = np.sum(np.power(sol_lf[:,mid:],2), axis=1)/2.0
+		pe_lf = -1.0/np.power(1 + np.sum(np.power(sol_lf[:,:mid],2),axis=1), 0.5)
+		fig4 = plt.figure('Problem 3 - Part B: Energy Leapfrog', figsize=(10,10))
+		fig4.suptitle('Problem 3 - Part B: Energy Leapfrog', fontsize=20)
+		plt.subplot(subplot).plot(ts, ke_lf + pe_lf, 'ro-', label=str('h: %0.3f'%h))
+		plt.subplot(subplot).plot(ts, ke_lf, 'go-', label=str('h: %0.3f'%h))
+		plt.subplot(subplot).plot(ts, pe_lf, 'bo-', label=str('h: %0.3f'%h))
+		plt.legend(fontsize=12)
+
 		subplot += 1
 
 
-
-	plt.subplots_adjust(wspace=0, hspace=0)
 	plt.show()
 
-def b():
-	x = np.array([1.0, 0.0, 0.0, 0.3])
-	ti, tf = 0.0, 100.0
-	h = 0.1
+''' Answers and Discussion
 
-	ts = myint.get_timesteps(ti, tf, h)
-	res = myint.runner(myint.rk_stepper, f_orbit, x, ts, h)
+Part A)
+		When we plot the solution to the orbital ODE found by RK4 or Leapfrog, we see what 
+	appears to be an ellipse that is precessing around the origin.  This happens because the
+	potential is not exactly 1/r. However, it is close enough to be mostly elliptical in shape.
+	When comparing the RK4 and Leapfrog graphs we see that both solutions are very similar.
+	At small step size h, the two are very comparable.  However, at larger h the Leapfrog
+	graph appears a bit more symmetric than the RK4 graph.  This is a bit surprising, as I
+	would have expected the 4th order method to produce more accurate estimation.
 
-	mid = len(res[0])/2 # m is for mid index of state vector
-	# e =  (np.sum(np.power(res[:,m:],2), axis=1)/2.0) + (-1.0/np.power(1+np.sum(np.power(res[:,:m],2),axis=1),0.5))
-	term1 = (np.sum(np.power(res[:,mid:],2), axis=1)/2.0)
-	term2 = (-1.0/np.power(1+np.sum(np.power(res[:,:mid],2),axis=1),0.5))
-	e = term1 + term2
+Part B)
+		In the second part of problem 3, I calculated the energy E for both the RK4 and 
+	Leapfrog solutions.  Beginning with the RK4 energies, we see that the total energy E (red)
+	remains constant over the time interval.  This makes sense, as we would expect and hope
+	that total energy is conserved.  After a closer look at the equation for E, I realized
+	that the first term is simply the kinetic energy.  I split E into the kinetic and potential
+	parts, and plotted them alongside E.  As we would expect in an orbiting scenario, the kinetic
+	and potential energies oscillate back and forth, as one form of energy is converted into the other.
+		The plots of Leapfrog show that unless step size is very small, the total energy estimated by
+	the Leapfrog method is not constant.  I believe that this issue is very similar to the phase
+	problems observed in Problem 2.  Because we are keeping track of positions and velocities at different
+	times, it makes sense that the total energy can oscillate.  Depending on where we are in the orbit,
+	we may be over or undercounting the total energy.  I believe that this problem can be solved by
+	finding the velocities at the same times we know the positions, however I have not had time to test
+	this myself.
 
-
-	plt.scatter(ts, e, alpha=0.5,c='g')
-	plt.scatter(ts, term1, c='r')
-	plt.scatter(ts, term2, c='b')
-	# plt.plot(ts,e,c='r')
-	plt.xlim(ti-h,tf+h)
-	# plt.ylim(-1,1)
-	plt.show()
-
-
-
-
-def main():
-	print 'main'
-	a()
-	b()
+'''
 
 if __name__ == '__main__':
 	main()
