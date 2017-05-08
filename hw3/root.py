@@ -31,7 +31,7 @@ def bisection(f, a, b):
 	'''
 
 	# keep track of these values to prevent from recalculating things
-	f_a, f_b = f((a,b))
+	f_a, f_b = f(np.array([a,b]))
 
 	if not f_a*f_b < 0.0:
 		return None
@@ -80,7 +80,7 @@ def bisection_step(f, a, b):
 	f_m = f(m)
 	if np.isclose(f_m, 0.0):
 		return (m, m, True)
-	return (a,m,0) if f_m*f(a) < 0.0 else (m,b,0)
+	return (a,m,False) if f_m*f(a) < 0.0 else (m,b,False)
 
 def bisection_runner(f, a, b):
 	# calculate the original end points of the bracket
@@ -100,7 +100,17 @@ def bisection_runner(f, a, b):
 		if done:
 			return a
 	# reached the end of a kajillion loop executions, return None
+	# or maybe just return what our best idea of the answer is?
 	return None
+
+'''
+An idea for how to deal with the single function vs stepper/runner
+if we use a single function and then return the entire array of values
+instead of just the "answer", and then in the spec say that the best
+answer found for the x-value of the root is in the xs[-1] spot, then
+we can see the entire "trace" of the approximations throughout the root finding.
+Is this "good" output?
+'''
 
 # print df_kep(0)
 # x = np.linspace(0.0, 2*np.pi, 100)
