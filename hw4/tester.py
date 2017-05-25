@@ -70,7 +70,9 @@ def main():
 	# Looking at this plot, we see that the model using the r0 found by
 	# golden search (in blue) does closely follow the observed data (in red).
 	# None of the non-optimal solutions (in green) appear to better fit the
-	# observed data.
+	# observed data. Although only a small number of sub-optimal models are
+	# shown, because we have actually optimized r0, we can be sure that the
+	# blue model is actually the best fitting model.
 
 if __name__ == '__main__':
 	main()
