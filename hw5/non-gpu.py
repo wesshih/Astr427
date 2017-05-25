@@ -12,35 +12,41 @@ import numpy as np
 import time
 import random as r
 
-
 NUM_POINTS = 10000000 # number of points to generate
 
 print 'beginning calc with NUM_POINTS = ', NUM_POINTS
 
-rs = np.array([[r.random(), r.random()] for i in xrange(NUM_POINTS)])
+'''
+Keep track of what was slow
+for i in xrange(NUM_POINTS) was painfully slow. like 4s for 100,000
 
-start = time.time()
-squared = np.power(rs,2)
-summed = np.array([np.sum(s) for s in squared])
-res = np.array([s for s in summed if s <= 1.0])
-end = time.time()
+rs2 = np.array([sum([r.random(), r.random()]) for i in xrange(NUM_POINTS)])
+	-> slower than just doing mag
 
-print 'took', end-start,'seconds to calc first way'
+l2 = sum([1 if m <= 1.0 else 0 for m in mag])
+	-> np.where is much faster
 
-start = time.time()
-res2 = np.array([rr for rr in rs if np.sum(np.power(rr,2)) <= 1.0])
-end = time.time()
-print 'took', end-start,'seconds to calc second way'
+xs = np.array([r.random()**2 for i in xrange(NUM_POINTS)])
+ys = np.array([r.random()**2 for i in xrange(NUM_POINTS)])
+mag2 = xs + ys
+	-> just a bit slower than doing mag all in one go
+'''
 
 
-print 'len rs\t',len(rs)
-print 'len res\t',len(res2)
-print 'area:', (4.0 * len(res2))/len(rs)
+t_begin = time.time()
+mag = np.array([r.random()**2 + r.random()**2 for i in xrange(NUM_POINTS)])
+t1 = time.time()
+print 'time to calc mags:',t1-t_begin
 
-print 'len res\t',len(res)
 
-# import matplotlib.pyplot as plt
+t1 = time.time()
+l1 = len(np.where(mag <= 1.0)[0])
+t2 = time.time()
+print 'time to accept',t2-t1
+print '\tl1',l1
 
-# plt.figure(figsize=(10,10))
-# plt.scatter(res2[:,0], res2[:,1])
-# plt.show()
+print 'pi:',4.0*l1/NUM_POINTS
+
+t_end = time.time()
+
+print 'Total time for execution:', t_end-t_begin
