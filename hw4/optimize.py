@@ -74,4 +74,3 @@ def golden(f, a, b, c):
 	# At this point np.isclose(a,c) == True, so essentiall a = c
 	# Can use either as the minimum
 	return (a, f(a))
-
