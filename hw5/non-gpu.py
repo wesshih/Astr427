@@ -12,7 +12,7 @@ import numpy as np
 import time
 import random as r
 
-NUM_POINTS = 10000000 # number of points to generate
+NUM_POINTS = 1000000000 # number of points to generate
 
 print 'beginning calc with NUM_POINTS = ', NUM_POINTS
 
@@ -50,3 +50,6 @@ print 'pi:',4.0*l1/NUM_POINTS
 t_end = time.time()
 
 print 'Total time for execution:', t_end-t_begin
+
+def calc_pi(N):
+	print 'calculating pi with',N,'samples'
