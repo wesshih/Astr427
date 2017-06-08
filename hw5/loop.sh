@@ -5,8 +5,8 @@ make clean
 make pi
 
 
-for N in {0..24}
+for M in {0..24}
 do
-  ./calcpi.out 10 $N
+  ./calcpi.out 10 $M
 done
 

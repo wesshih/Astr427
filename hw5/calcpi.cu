@@ -4,8 +4,8 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define NN (1<<5) // number of seeds
-#define MM (1<<10) // number of samples per seed
+#define NN (1<<10) // number of seeds
+#define MM (1<<20) // number of samples per seed
 #define THREADBLOCKSIZE 1024
 #define LENGTH (N*sizeof(float))
 #define INDEX (blockIdx.x * blockDim.x + threadIdx.x)
@@ -14,21 +14,19 @@
 #define D2H cudaMemcpyDeviceToHost
 #define H2D cudaMemcpyHostToDevice
 
-typedef struct {
-  float x, y;
-} point;
-
 extern __shared__ float sdat[];
 
+/*
+Calculates an estimate for pi for each thread. Uses m random numbers
+generated using the globalState random number generator
+*/
 __device__ void d_gen(curandState *globalState, int m) {
   int i = INDEX;
   curandState localState = globalState[i];
 
-  int spt = m; //M; //number of samples per thread
+  int spt = m; //number of samples per thread
   int tid = threadIdx.x;
-  //int bid = blockIdx.x;
   int count = 0;
-  //printf("tid:%d\tbid:%d\ti:%d\n",tid,bid,i);
   for (int s = 0; s < spt; s++) {
     float rx = curand_uniform(&localState);
     float ry = curand_uniform(&localState);
@@ -40,11 +38,14 @@ __device__ void d_gen(curandState *globalState, int m) {
   }
 
   globalState[i] = localState;
-  //sdat[tid] *= 4.0f;
   sdat[tid] *= 1.0/spt;
-
 }
 
+/*
+Creates an estimate of pi for an entire block. Sums the
+individual thread estimates and then divides by the number of threads
+in a block.
+*/
 __device__ void d_count(float *sums) {
   int tid = threadIdx.x;
   for (int i = blockDim.x/2; i > 0; i >>= 1) {
@@ -59,6 +60,10 @@ __device__ void d_count(float *sums) {
   }
 }
 
+/*
+Actuallyt generates the estimates for pi for each block once the random
+number generators are correctly set up.
+*/
 __global__ void generate(curandState *globalState, float *sums, int m) {
   d_gen(globalState, m);
   __syncthreads();
@@ -66,23 +71,29 @@ __global__ void generate(curandState *globalState, float *sums, int m) {
   __syncthreads();
 }
 
+/*
+Sets up the random number generators for the blocks. This step must be
+called before the pi estimates are generated.
+*/
 __global__ void kernel_setup(curandState *states) {
   int i = INDEX;
   curand_init(0, i, 0, &states[i]);
 }
 
+/*
+Actually generates the estimate of pi.
+*/
 int main(int argc, char *argv[]) {
  
   int N,M;
 
-  if (argc > 1) {
-    if (argc != 3) {
-      printf("wrong number of args. exiting\n");
-      return -1;
-    }
+  if (argc == 3) {
     N = 1 << atoi(argv[1]);
     M = 1 << atoi(argv[2]);
     printf("N: %d, M: %d\n",N, M);
+  } else {
+    N = NN;
+    M = MM;
   }
 
 
@@ -143,14 +154,7 @@ int main(int argc, char *argv[]) {
   }
 
   float pi = 4.0 * total / grid.x;
-
-  printf("inside: %f\n", total);
-  printf("ratio: %f\n", 1.0f*total/grid.x);
   printf("pi estimate: %f\n", pi);
-
-  printf("sizeof(float) %d\n",sizeof(float));
-  printf("block (x,y,z): (%d,%d,%d)\n",block.x,block.y,block.z);
-  printf("grid  (x,y,z): (%d,%d,%d)\n",grid.x, grid.y, grid.z);
 
   printf("cleaning up\n");
   cudaFree(states);
@@ -160,9 +164,9 @@ int main(int argc, char *argv[]) {
   printf("it took %f seconds to calc total and clean up\n", CALC_TIME(t1,t2));
   printf("\nThe total execution time of this program was %f seconds\n", CALC_TIME(begin,t2));
 
-FILE *fp = fopen("test.dat", "a");
-//fseek(fp, SEEK_END);
-fprintf(fp, "%d %d %.10f\n",N,M,pi);
-fclose(fp);
+  FILE *fp = fopen("gpu_results.dat", "a");
+  fprintf(fp, "%d %d %.10f\n",N,M,pi);
+  fclose(fp);
 
+  return 0;
 }
