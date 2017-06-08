@@ -40,7 +40,7 @@ __device__ void d_gen(curandState *globalState, int m) {
   }
 
   globalState[i] = localState;
-  sdat[tid] *= 4.0f;
+  //sdat[tid] *= 4.0f;
   sdat[tid] *= 1.0/spt;
 
 }
@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
     total += p[i];
   }
 
-  float pi = 1.0 * total / grid.x;
+  float pi = 4.0 * total / grid.x;
 
   printf("inside: %f\n", total);
   printf("ratio: %f\n", 1.0f*total/grid.x);
@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
 
 FILE *fp = fopen("test.dat", "a");
 //fseek(fp, SEEK_END);
-fprintf(fp, "%d,%d,%f\n",N,M,pi);
+fprintf(fp, "%d %d %.10f\n",N,M,pi);
 fclose(fp);
 
 }
